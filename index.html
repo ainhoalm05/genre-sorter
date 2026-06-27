@@ -721,7 +721,7 @@ async function analyzeGenres() {
     done++;
     const pct = 40 + Math.round((done / artistIds.length) * 40);
     setProgress(Math.min(pct, 80), `Obteniendo géneros... ${done}/${artistIds.length} artistas`);
-    await sleep(50);
+    await sleep(500);
   }
 
   // Map each track to a genre
