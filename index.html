@@ -705,23 +705,29 @@ async function analyzeGenres() {
   logMsg('info', '→ Analizando géneros de artistas...');
   setProgress(40, 'Obteniendo géneros...');
 
-  // Collect unique artist IDs
+  // Collect unique artist IDs - fetch in small batches with long delays
   const artistIds = [...new Set(STATE.tracks.flatMap(t => t.artists.map(a => a.id)))];
   const artistGenres = {};
-
-  // Fetch artists one by one to avoid 403 on batch endpoint
+  const BATCH = 5;
   let done = 0;
-  for (const artistId of artistIds) {
+
+  for (let i = 0; i < artistIds.length; i += BATCH) {
+    const batch = artistIds.slice(i, i + BATCH);
+    // Try batch first, fall back to individual
     try {
-      const a = await spotifyGet(`/artists/${artistId}`);
-      if (a && a.id) artistGenres[a.id] = a.genres || [];
+      const data = await spotifyGet(`/artists?ids=${batch.join(',')}`);
+      if (data && data.artists) {
+        data.artists.forEach(a => { if (a) artistGenres[a.id] = a.genres || []; });
+        done += batch.length;
+      }
     } catch(e) {
-      artistGenres[artistId] = [];
+      // On error, mark all as empty and continue
+      batch.forEach(id => { artistGenres[id] = []; });
+      done += batch.length;
     }
-    done++;
     const pct = 40 + Math.round((done / artistIds.length) * 40);
     setProgress(Math.min(pct, 80), `Obteniendo géneros... ${done}/${artistIds.length} artistas`);
-    await sleep(500);
+    await sleep(1500);
   }
 
   // Map each track to a genre
@@ -729,7 +735,7 @@ async function analyzeGenres() {
 
   STATE.tracks.forEach(track => {
     const genres = track.artists.flatMap(a => artistGenres[a.id] || []);
-    const mainGenre = classifyGenre(genres) || 'Sin género';
+    const mainGenre = classifyGenre(genres) || classifyByArtistName(track.artists.map(a => a.name)) || 'Sin género';
 
     if (!STATE.genreMap[mainGenre]) STATE.genreMap[mainGenre] = [];
     STATE.genreMap[mainGenre].push(track);
@@ -739,6 +745,28 @@ async function analyzeGenres() {
   logMsg('ok', `✓ Géneros identificados: ${Object.keys(STATE.genreMap).length}`);
 
   setTimeout(showResults, 500);
+}
+
+// Fallback: classify by well-known artist names
+function classifyByArtistName(names) {
+  const nameStr = names.join(' ').toLowerCase();
+  const map = [
+    ['Reggaeton / Urbano Latino', ['bad bunny','j balvin','maluma','ozuna','anuel','karol g','nicki nicole','bizarrap','myke towers','rauw alejandro','jhay cortez','sech','dalex','wisin','yandel','daddy yankee','don omar','tego calderon','arcangel','de la ghetto','nengo flow','lyanno','jhoni','mora']],
+    ['Pop Latino', ['shakira','enrique iglesias','ricky martin','marc anthony','luis fonsi','sebastián yatra','camilo','paulo londra','tini','maria becerra','nathy peluso','aitana','alejandro sanz','pablo alborán','melendi','dani fernández','fito','joaquín sabina','david bisbal','chenoa','rosario']],
+    ['Pop', ['taylor swift','ed sheeran','ariana grande','billie eilish','dua lipa','harry styles','the weeknd','post malone','olivia rodrigo','doja cat','lizzo','sia','adele','beyoncé','rihanna','lady gaga','katy perry','selena gomez','justin bieber','shawn mendes']],
+    ['Hip-Hop / Rap', ['drake','kendrick lamar','j cole','travis scott','future','lil uzi','juice wrld','xxxtentacion','lil baby','gunna','young thug','21 savage','cardi b','nicki minaj','megan thee stallion','eminem','jay-z','kanye west','snoop dogg','50 cent']],
+    ['R&B / Soul', ['frank ocean','sza','bryson tiller','h.e.r','jhene aiko','brent faiyaz','summer walker','daniel caesar','giveon','6lack','miguel','usher','alicia keys','john legend','sam smith','amy winehouse']],
+    ['Rock', ['coldplay','imagine dragons','arctic monkeys','the killers','radiohead','foo fighters','green day','linkin park','metallica','ac/dc','gun roses','nirvana','pearl jam','red hot chili','twenty one pilots','fall out boy','panic at the disco','my chemical romance']],
+    ['Electrónica / Dance', ['calvin harris','david guetta','martin garrix','tiësto','avicii','deadmau5','daft punk','marshmello','chainsmokers','alan walker','kygo','diplo','skrillex','zedd','don diablo']],
+    ['Flamenco / Español', ['paco de lucía','camarón','rosalía','pitingo','diego el cigala','estrella morente','niña pastori','david de maria','antonio orozco']],
+    ['K-Pop / J-Pop', ['bts','blackpink','exo','nct','stray kids','twice','red velvet','aespa','ive','newjeans']],
+    ['Reggae / Dancehall', ['bob marley','damian marley','sean paul','shaggy','chronixx','protoje']],
+    ['Indie / Alternativo', ['vampire weekend','tame impala','mac demarco','rex orange','beabadoobee','clairo','wallows','dominic fike']],
+  ];
+  for (const [genre, artists] of map) {
+    if (artists.some(a => nameStr.includes(a))) return genre;
+  }
+  return null;
 }
 
 // Genre classification logic
