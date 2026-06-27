@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotify Genre Sorter</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1DB954;
+    --green-dim: #158a3e;
+    --black: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #888;
+    --font-mono: 'Space Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(29,185,84,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(29,185,84,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  header {
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  h1 span { color: var(--green); }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 16px;
+  }
+
+  /* Steps */
+  .step-num {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 11px;
+    text-align: center;
+    line-height: 24px;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Inputs */
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-top: 8px;
+  }
+
+  input:focus { border-color: var(--green); }
+  input::placeholder { color: var(--muted); }
+
+  label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: block;
+    margin-top: 16px;
+  }
+  label:first-child { margin-top: 0; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--green);
+    color: #000;
+    font-weight: 700;
+  }
+  .btn-primary:hover { background: #22d65f; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--green);
+    border: 1px solid var(--green);
+  }
+  .btn-secondary:hover { background: rgba(29,185,84,0.1); }
+
+  .btn-danger {
+    background: transparent;
+    color: #ff4444;
+    border: 1px solid #ff4444;
+    font-size: 11px;
+    padding: 8px 16px;
+  }
+  .btn-danger:hover { background: rgba(255,68,68,0.1); }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* Progress */
+  .progress-wrap {
+    margin: 20px 0;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Log */
+  .log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px;
+    font-size: 11px;
+    color: var(--muted);
+    height: 140px;
+    overflow-y: auto;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    line-height: 1.8;
+  }
+
+  .log-entry { display: block; }
+  .log-entry.ok { color: var(--green); }
+  .log-entry.err { color: #ff4444; }
+  .log-entry.info { color: #888; }
+
+  /* Genre grid */
+  .genre-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .genre-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .genre-card:hover { border-color: var(--green); }
+
+  .genre-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--genre-color, var(--green));
+  }
+
+  .genre-name {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: capitalize;
+  }
+
+  .genre-count {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .genre-bar {
+    height: 2px;
+    background: var(--border);
+    margin-top: 10px;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .genre-bar-fill {
+    height: 100%;
+    background: var(--genre-color, var(--green));
+    border-radius: 1px;
+  }
+
+  /* Section toggle */
+  .hidden { display: none !important; }
+
+  /* Status badge */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 2px;
+    margin-left: 10px;
+  }
+  .badge-ok { background: rgba(29,185,84,0.15); color: var(--green); border: 1px solid var(--green); }
+  .badge-warn { background: rgba(255,200,0,0.1); color: #ffc800; border: 1px solid #ffc800; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .info-box {
+    background: rgba(29,185,84,0.07);
+    border: 1px solid rgba(29,185,84,0.2);
+    border-radius: 2px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-top: 16px;
+  }
+
+  .info-box strong { color: var(--green); }
+
+  /* Summary table */
+  .summary-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+  .summary-table th { text-align: left; color: var(--muted); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .summary-table td { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .summary-table td:last-child { text-align: right; color: var(--green); }
+
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .create-all-btn {
+    margin-top: 24px;
+    width: 100%;
+    justify-content: center;
+    padding: 16px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">♪</div>
+      <span style="font-family:var(--font-display);font-weight:800;font-size:18px;letter-spacing:-0.5px;">GenreSplit</span>
+    </div>
+    <h1>Divide tu playlist<br>por <span>géneros</span></h1>
+    <p class="subtitle">Spotify Playlist Sorter — by Claude</p>
+  </header>
+
+  <!-- STEP 1: Config -->
+  <div class="card" id="card-config">
+    <div class="card-label">⚙ Configuración</div>
+
+    <label>Client ID de Spotify</label>
+    <input type="text" id="client-id" placeholder="a9cf422d..." value="a9cf422d80884db9b385562637951548">
+
+    <label>Client Secret de Spotify</label>
+    <input type="password" id="client-secret" placeholder="6e847f..." value="6e847f6b4c5b42d597a59e52856c1017">
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startAuth()">
+        ▶ Conectar con Spotify
+      </button>
+    </div>
+
+    <div class="info-box">
+      <strong>¿Cómo funciona?</strong><br>
+      Se abrirá una ventana de Spotify para que autorices el acceso. Luego pegas el link de tu playlist y el programa clasifica todas las canciones por género automáticamente.
+    </div>
+  </div>
+
+  <!-- STEP 2: Token -->
+  <div class="card hidden" id="card-token">
+    <div class="card-label">🔑 Autorización</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+      Se ha abierto una ventana de Spotify. Autoriza el acceso y luego pega aquí la URL a la que te redirigió (empieza por <code style="color:var(--green)">https://lvh.me/callback</code>).
+    </p>
+    <input type="text" id="redirect-url" placeholder="https://lvh.me/callback/?code=AQD...">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="handleRedirect()">✓ Confirmar autorización</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Playlist -->
+  <div class="card hidden" id="card-playlist">
+    <div class="card-label">🎵 Tu Playlist <span class="badge badge-ok" id="user-badge"></span></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">Pega el enlace de la playlist que quieres separar por géneros:</p>
+    <input type="text" id="playlist-url" placeholder="https://open.spotify.com/playlist/37i9dQZF1DX...">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="loadPlaylist()">→ Cargar playlist</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Analysis -->
+  <div class="card hidden" id="card-analysis">
+    <div class="card-label">🔍 Analizando</div>
+    <div id="playlist-info" style="margin-bottom:16px;"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
+      <div class="progress-text" id="progress-text">Iniciando...</div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- STEP 5: Results -->
+  <div class="card hidden" id="card-results">
+    <div class="card-label">🎸 Géneros encontrados</div>
+    <div id="results-summary"></div>
+    <div class="genre-grid" id="genre-grid"></div>
+    <button class="btn btn-primary create-all-btn" id="create-btn" onclick="createAllPlaylists()">
+      ✦ Crear todas las playlists en Spotify
+    </button>
+  </div>
+
+  <!-- STEP 6: Done -->
+  <div class="card hidden" id="card-done">
+    <div class="card-label">✅ Completado</div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="create-progress-bar"></div></div>
+      <div class="progress-text" id="create-progress-text"></div>
+    </div>
+    <div class="log" id="create-log"></div>
+    <div id="done-summary" style="margin-top:16px;"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const STATE = {
+  clientId: '',
+  clientSecret: '',
+  accessToken: '',
+  refreshToken: '',
+  userId: '',
+  userName: '',
+  tracks: [],
+  genreMap: {},
+};
+
+const GENRE_COLORS = [
+  '#1DB954','#FF6B6B','#4ECDC4','#FFE66D','#A855F7',
+  '#F97316','#06B6D4','#EC4899','#84CC16','#F59E0B',
+  '#6366F1','#14B8A6','#EF4444','#8B5CF6','#10B981',
+];
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+function startAuth() {
+  STATE.clientId = document.getElementById('client-id').value.trim();
+  STATE.clientSecret = document.getElementById('client-secret').value.trim();
+
+  if (!STATE.clientId || !STATE.clientSecret) {
+    alert('Por favor rellena el Client ID y Client Secret');
+    return;
+  }
+
+  const scopes = [
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'playlist-modify-public',
+    'playlist-modify-private',
+  ].join(' ');
+
+  const params = new URLSearchParams({
+    client_id: STATE.clientId,
+    response_type: 'code',
+    redirect_uri: 'https://lvh.me/callback',
+    scope: scopes,
+    show_dialog: 'true',
+    state: Math.random().toString(36).substring(7),
+  });
+
+  const authUrl = `https://accounts.spotify.com/authorize?${params}`;
+  window.open(authUrl, '_blank', 'width=500,height=700');
+
+  show('card-token');
+}
+
+async function handleRedirect() {
+  const url = document.getElementById('redirect-url').value.trim();
+  let code;
+  try {
+    const u = new URL(url);
+    code = u.searchParams.get('code');
+  } catch(e) {
+    alert('URL no válida. Asegúrate de pegar la URL completa a la que te redirigió Spotify.');
+    return;
+  }
+
+  if (!code) {
+    alert('No se encontró el código de autorización en la URL. ¿Aceptaste los permisos en Spotify?');
+    return;
+  }
+
+  // Exchange code for token
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: 'https://lvh.me/callback',
+    client_id: STATE.clientId,
+    client_secret: STATE.clientSecret,
+  });
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error_description || data.error);
+
+    STATE.accessToken = data.access_token;
+    STATE.refreshToken = data.refresh_token;
+
+    // Debug: log token scopes
+    console.log('Token scopes:', data.scope);
+    console.log('Token type:', data.token_type);
+
+    // Get user info
+    const me = await spotifyGet('/me');
+    STATE.userId = me.id;
+    STATE.userName = me.display_name || me.id;
+
+    document.getElementById('user-badge').textContent = STATE.userName;
+    hide('card-token');
+    show('card-playlist');
+  } catch (e) {
+    alert('Error al obtener el token: ' + e.message);
+  }
+}
+
+// ─── Spotify API helpers ──────────────────────────────────────────────────────
+async function spotifyGet(path) {
+  const base = path.startsWith('http') ? path : `https://api.spotify.com/v1${path}`;
+  const res = await fetch(base, {
+    headers: { Authorization: `Bearer ${STATE.accessToken}` },
+  });
+  if (res.status === 401) throw new Error('Token expirado. Recarga la página y vuelve a autorizar.');
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    let msg = `HTTP ${res.status}`;
+    try { const j = JSON.parse(txt); msg = j.error?.message || j.error || msg; } catch(e) {}
+    throw new Error(msg + ' | URL: ' + base.substring(0,80));
+  }
+  return res.json();
+}
+
+async function spotifyPost(path, body) {
+  const res = await fetch(`https://api.spotify.com/v1${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${STATE.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.error?.status || `HTTP ${res.status} - ${res.url}`);
+  }
+  return res.json();
+}
+
+// ─── Load Playlist ────────────────────────────────────────────────────────────
+function extractPlaylistId(input) {
+  try {
+    const url = new URL(input);
+    const parts = url.pathname.split('/');
+    const idx = parts.indexOf('playlist');
+    if (idx !== -1) return parts[idx + 1].split('?')[0];
+  } catch (e) {}
+  // Maybe they pasted just the ID
+  if (/^[A-Za-z0-9]{22}$/.test(input.trim())) return input.trim();
+  return null;
+}
+
+async function loadPlaylist() {
+  const input = document.getElementById('playlist-url').value.trim();
+  const playlistId = extractPlaylistId(input);
+  if (!playlistId) {
+    alert('URL de playlist no válida. Asegúrate de pegar el enlace completo de Spotify.');
+    return;
+  }
+
+  show('card-analysis');
+  setProgress(0, 'Obteniendo información de la playlist...');
+  logMsg('info', `→ Cargando playlist ${playlistId}...`);
+
+  try {
+    // Get all tracks directly - no preflight call needed
+    STATE.tracks = [];
+    let url = `/playlists/${playlistId}/items?limit=50`;
+    let loaded = 0;
+    let playlistName = playlistId;
+    let playlistImage = '';
+    let total = '?';
+
+    logMsg('info', '→ Leyendo canciones...');
+
+    while (url) {
+      const data = await spotifyGet(url);
+      if (!data || data.error) throw new Error(data?.error?.message || "Error leyendo canciones");
+
+      if (loaded === 0) {
+        total = data.total;
+        setProgress(5, `Cargando canciones... 0/${total}`);
+      }
+
+      const valid = data.items.filter(i => (i.track && i.track.id) || (i.item && i.item.id));
+      STATE.tracks.push(...valid.map(i => i.track || i.item));
+      loaded += valid.length;
+      const pct = 5 + Math.round((loaded / total) * 35);
+      setProgress(pct, `Cargando canciones... ${loaded}/${total}`);
+      url = data.next;
+      if (data.next) await sleep(100);
+    }
+
+    // Get playlist metadata after tracks load
+    try {
+      const playlist = await spotifyGet(`/playlists/${playlistId}`);
+      playlistName = playlist.name || playlistId;
+      playlistImage = playlist.images?.[0]?.url || '';
+      document.getElementById('playlist-info').innerHTML = `
+        <div style="display:flex;gap:16px;align-items:center;">
+          ${playlistImage ? `<img src="${playlistImage}" style="width:60px;height:60px;object-fit:cover;border-radius:4px;">` : ''}
+          <div>
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:700;">${playlistName}</div>
+            <div style="font-size:12px;color:var(--muted);">${STATE.tracks.length} canciones cargadas</div>
+          </div>
+        </div>`;
+    } catch(e) {
+      document.getElementById('playlist-info').innerHTML = `<div style="font-size:14px;">${STATE.tracks.length} canciones cargadas</div>`;
+    }
+
+    logMsg('ok', `✓ ${STATE.tracks.length} canciones cargadas`);
+
+    logMsg('ok', `✓ ${STATE.tracks.length} canciones cargadas`);
+    await analyzeGenres();
+
+  } catch (e) {
+    logMsg('err', `✗ Error: ${e.message}`);
+  }
+}
+
+// ─── Genre Analysis ───────────────────────────────────────────────────────────
+async function analyzeGenres() {
+  logMsg('info', '→ Analizando géneros de artistas...');
+  setProgress(40, 'Obteniendo géneros...');
+
+  // Collect unique artist IDs
+  const artistIds = [...new Set(STATE.tracks.flatMap(t => t.artists.map(a => a.id)))];
+  const artistGenres = {};
+
+  // Batch requests of 50
+  for (let i = 0; i < artistIds.length; i += 20) {
+    const batch = artistIds.slice(i, i + 20);
+    const data = await spotifyGet(`/artists?ids=${batch.join(',')}`);
+    data.artists.forEach(a => {
+      if (a) artistGenres[a.id] = a.genres || [];
+    });
+    const pct = 40 + Math.round(((i + 20) / artistIds.length) * 40);
+    setProgress(Math.min(pct, 80), `Obteniendo géneros... ${Math.min(i + 50, artistIds.length)}/${artistIds.length} artistas`);
+    await sleep(300);
+  }
+
+  // Map each track to a genre
+  STATE.genreMap = {};
+
+  STATE.tracks.forEach(track => {
+    const genres = track.artists.flatMap(a => artistGenres[a.id] || []);
+    const mainGenre = classifyGenre(genres) || 'Sin género';
+
+    if (!STATE.genreMap[mainGenre]) STATE.genreMap[mainGenre] = [];
+    STATE.genreMap[mainGenre].push(track);
+  });
+
+  setProgress(100, 'Análisis completado');
+  logMsg('ok', `✓ Géneros identificados: ${Object.keys(STATE.genreMap).length}`);
+
+  setTimeout(showResults, 500);
+}
+
+// Genre classification logic
+function classifyGenre(genres) {
+  if (!genres.length) return null;
+
+  const checks = [
+    ['Reggaeton / Urbano Latino', ['reggaeton', 'latin trap', 'urbano latino', 'trap latino', 'perreo']],
+    ['Pop Latino', ['latin pop', 'pop latinoam', 'latin', 'cumbia', 'bachata', 'salsa', 'merengue']],
+    ['Hip-Hop / Rap', ['hip hop', 'rap', 'trap', 'drill', 'boom bap', 'conscious hip hop']],
+    ['R&B / Soul', ['r&b', 'soul', 'neo soul', 'contemporary r&b', 'funk']],
+    ['Pop', ['pop', 'dance pop', 'electropop', 'synth-pop', 'teen pop', 'bedroom pop']],
+    ['Rock', ['rock', 'indie rock', 'alternative rock', 'punk', 'grunge', 'metal', 'emo']],
+    ['Electrónica / Dance', ['electronic', 'edm', 'house', 'techno', 'trance', 'dubstep', 'drum and bass', 'electronica', 'dance']],
+    ['Indie / Alternativo', ['indie', 'alternative', 'lo-fi', 'shoegaze', 'dream pop']],
+    ['Clásica / Instrumental', ['classical', 'orchestral', 'instrumental', 'piano', 'ambient']],
+    ['Jazz / Blues', ['jazz', 'blues', 'swing', 'bebop']],
+    ['Country / Folk', ['country', 'folk', 'bluegrass', 'americana']],
+    ['Reggae / Dancehall', ['reggae', 'dancehall', 'ska']],
+    ['K-Pop / J-Pop', ['k-pop', 'korean pop', 'j-pop', 'japanese pop', 'anime']],
+    ['Flamenco / Español', ['flamenco', 'nuevo flamenco', 'rumba catalana', 'spanish']],
+  ];
+
+  const genreStr = genres.join(' ').toLowerCase();
+
+  for (const [label, keywords] of checks) {
+    if (keywords.some(k => genreStr.includes(k))) return label;
+  }
+
+  // Fallback: use the first genre, capitalized
+  const first = genres[0];
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+// ─── Show Results ─────────────────────────────────────────────────────────────
+function showResults() {
+  const sorted = Object.entries(STATE.genreMap).sort((a, b) => b[1].length - a[1].length);
+  const total = STATE.tracks.length;
+  const maxCount = sorted[0][1].length;
+
+  // Summary
+  document.getElementById('results-summary').innerHTML = `
+    <table class="summary-table">
+      <tr><th>Stat</th><th>Valor</th></tr>
+      <tr><td>Total canciones</td><td>${total}</td></tr>
+      <tr><td>Géneros encontrados</td><td>${sorted.length}</td></tr>
+      <tr><td>Género principal</td><td>${sorted[0][0]} (${sorted[0][1].length})</td></tr>
+    </table>`;
+
+  // Genre cards
+  const grid = document.getElementById('genre-grid');
+  grid.innerHTML = '';
+  sorted.forEach(([genre, tracks], i) => {
+    const color = GENRE_COLORS[i % GENRE_COLORS.length];
+    const pct = Math.round((tracks.length / total) * 100);
+    const barWidth = Math.round((tracks.length / maxCount) * 100);
+    grid.innerHTML += `
+      <div class="genre-card" style="--genre-color:${color}">
+        <div class="genre-name">${genre}</div>
+        <div class="genre-count">${tracks.length} canciones · ${pct}%</div>
+        <div class="genre-bar"><div class="genre-bar-fill" style="width:${barWidth}%"></div></div>
+      </div>`;
+  });
+
+  show('card-results');
+}
+
+// ─── Create Playlists ─────────────────────────────────────────────────────────
+async function createAllPlaylists() {
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creando playlists...';
+
+  show('card-done');
+
+  const sorted = Object.entries(STATE.genreMap).sort((a, b) => b[1].length - a[1].length);
+  const total = sorted.length;
+  let created = 0;
+  const results = [];
+
+  for (const [genre, tracks] of sorted) {
+    setCreateProgress(Math.round((created / total) * 100), `Creando "${genre}"...`);
+    createLog('info', `→ Creando playlist: ${genre} (${tracks.length} canciones)`);
+
+    try {
+      // Create playlist
+      const pl = await spotifyPost(`/users/${STATE.userId}/playlists`, {
+        name: `${genre} 🎵`,
+        description: `Separado automáticamente por GenreSplit · ${tracks.length} canciones`,
+        public: false,
+      });
+
+      // Add tracks in batches of 100
+      const uris = tracks.map(t => `spotify:track:${t.id}`);
+      for (let i = 0; i < uris.length; i += 100) {
+        await spotifyPost(`/playlists/${pl.id}/tracks`, {
+          uris: uris.slice(i, i + 100),
+        });
+        await sleep(200);
+      }
+
+      createLog('ok', `✓ "${genre}" creada (${tracks.length} canciones)`);
+      results.push({ genre, count: tracks.length, id: pl.id });
+    } catch (e) {
+      createLog('err', `✗ Error en "${genre}": ${e.message}`);
+    }
+
+    created++;
+    await sleep(300);
+  }
+
+  setCreateProgress(100, '¡Todo listo!');
+
+  document.getElementById('done-summary').innerHTML = `
+    <div class="info-box">
+      <strong>✅ ${results.length} playlists creadas en tu cuenta de Spotify</strong><br>
+      Ábrelas desde la app de Spotify en "Tu biblioteca" → Playlists.<br><br>
+      ${results.map(r => `• <strong>${r.genre}</strong> — ${r.count} canciones`).join('<br>')}
+    </div>`;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setProgress(pct, text) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = text;
+}
+
+function setCreateProgress(pct, text) {
+  document.getElementById('create-progress-bar').style.width = pct + '%';
+  document.getElementById('create-progress-text').textContent = text;
+}
+
+function logMsg(type, msg) {
+  const log = document.getElementById('log');
+  const span = document.createElement('span');
+  span.className = `log-entry ${type}`;
+  span.textContent = msg;
+  log.appendChild(span);
+  log.scrollTop = log.scrollHeight;
+}
+
+function createLog(type, msg) {
+  const log = document.getElementById('create-log');
+  const span = document.createElement('span');
+  span.className = `log-entry ${type}`;
+  span.textContent = msg;
+  log.appendChild(span);
+  log.scrollTop = log.scrollHeight;
+}
+</script>
+</body>
+</html>
