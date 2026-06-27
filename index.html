@@ -398,16 +398,13 @@
     </div>
   </div>
 
-  <!-- STEP 2: Token -->
+  <!-- STEP 2: Token (auto-handled) -->
   <div class="card hidden" id="card-token">
-    <div class="card-label">🔑 Autorización</div>
+    <div class="card-label">🔑 Autorizando...</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-      Se ha abierto una ventana de Spotify. Autoriza el acceso y luego pega aquí la URL a la que te redirigió (empieza por <code style="color:var(--green)">https://ainhoalm05.github.io/genre-sorter</code>).
+      <span class="spinner"></span> Procesando autorización de Spotify...
     </p>
-    <input type="text" id="redirect-url" placeholder="https://ainhoalm05.github.io/genre-sorter/?code=AQD...">
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="handleRedirect()">✓ Confirmar autorización</button>
-    </div>
+    <input type="text" id="redirect-url" style="display:none">
   </div>
 
   <!-- STEP 3: Playlist -->
@@ -473,6 +470,32 @@ const GENRE_COLORS = [
   '#6366F1','#14B8A6','#EF4444','#8B5CF6','#10B981',
 ];
 
+// ─── Auto-detect code from URL on page load ──────────────────────────────────
+window.addEventListener('load', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (code) {
+    // Restore saved credentials
+    const clientId = localStorage.getItem('sp_client_id');
+    const clientSecret = localStorage.getItem('sp_client_secret');
+    if (clientId && clientSecret) {
+      STATE.clientId = clientId;
+      STATE.clientSecret = clientSecret;
+      document.getElementById('client-id').value = clientId;
+      document.getElementById('client-secret').value = clientSecret;
+      show('card-token');
+      document.getElementById('redirect-url').value = window.location.href;
+      // Auto-process
+      await handleRedirect();
+    } else {
+      show('card-token');
+      document.getElementById('redirect-url').value = window.location.href;
+    }
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 function startAuth() {
   STATE.clientId = document.getElementById('client-id').value.trim();
@@ -499,8 +522,13 @@ function startAuth() {
     state: Math.random().toString(36).substring(7),
   });
 
+  // Save credentials for after redirect
+  localStorage.setItem('sp_client_id', STATE.clientId);
+  localStorage.setItem('sp_client_secret', STATE.clientSecret);
+
   const authUrl = `https://accounts.spotify.com/authorize?${params}`;
-  window.open(authUrl, '_blank', 'width=500,height=700');
+  // Redirect in same window so callback works
+  window.location.href = authUrl;
 
   show('card-token');
 }
