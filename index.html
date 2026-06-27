@@ -709,16 +709,19 @@ async function analyzeGenres() {
   const artistIds = [...new Set(STATE.tracks.flatMap(t => t.artists.map(a => a.id)))];
   const artistGenres = {};
 
-  // Batch requests of 50
-  for (let i = 0; i < artistIds.length; i += 20) {
-    const batch = artistIds.slice(i, i + 20);
-    const data = await spotifyGet(`/artists?ids=${batch.join(',')}`);
-    data.artists.forEach(a => {
-      if (a) artistGenres[a.id] = a.genres || [];
-    });
-    const pct = 40 + Math.round(((i + 20) / artistIds.length) * 40);
-    setProgress(Math.min(pct, 80), `Obteniendo géneros... ${Math.min(i + 50, artistIds.length)}/${artistIds.length} artistas`);
-    await sleep(300);
+  // Fetch artists one by one to avoid 403 on batch endpoint
+  let done = 0;
+  for (const artistId of artistIds) {
+    try {
+      const a = await spotifyGet(`/artists/${artistId}`);
+      if (a && a.id) artistGenres[a.id] = a.genres || [];
+    } catch(e) {
+      artistGenres[artistId] = [];
+    }
+    done++;
+    const pct = 40 + Math.round((done / artistIds.length) * 40);
+    setProgress(Math.min(pct, 80), `Obteniendo géneros... ${done}/${artistIds.length} artistas`);
+    await sleep(50);
   }
 
   // Map each track to a genre
