@@ -402,9 +402,9 @@
   <div class="card hidden" id="card-token">
     <div class="card-label">🔑 Autorización</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-      Se ha abierto una ventana de Spotify. Autoriza el acceso y luego pega aquí la URL a la que te redirigió (empieza por <code style="color:var(--green)">https://lvh.me/callback</code>).
+      Se ha abierto una ventana de Spotify. Autoriza el acceso y luego pega aquí la URL a la que te redirigió (empieza por <code style="color:var(--green)">https://ainhoalm05.github.io/genre-sorter</code>).
     </p>
-    <input type="text" id="redirect-url" placeholder="https://lvh.me/callback/?code=AQD...">
+    <input type="text" id="redirect-url" placeholder="https://ainhoalm05.github.io/genre-sorter/?code=AQD...">
     <div class="btn-row">
       <button class="btn btn-primary" onclick="handleRedirect()">✓ Confirmar autorización</button>
     </div>
@@ -493,7 +493,7 @@ function startAuth() {
   const params = new URLSearchParams({
     client_id: STATE.clientId,
     response_type: 'code',
-    redirect_uri: 'https://lvh.me/callback',
+    redirect_uri: 'https://ainhoalm05.github.io/genre-sorter',
     scope: scopes,
     show_dialog: 'true',
     state: Math.random().toString(36).substring(7),
@@ -525,7 +525,7 @@ async function handleRedirect() {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    redirect_uri: 'https://lvh.me/callback',
+    redirect_uri: 'https://ainhoalm05.github.io/genre-sorter',
     client_id: STATE.clientId,
     client_secret: STATE.clientSecret,
   });
